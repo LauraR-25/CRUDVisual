@@ -8,14 +8,13 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class Main extends Application {
-
-    // ¡ESTE MÉTODO DEBE EXISTIR!
     public static void main(String[] args) {
-        launch(args);  // Esta línea es clave
+        launch(args);
     }
 
     @Override
     public void start(Stage stage) throws IOException {
+        // Ruta CORRECTA: /view/ConnectionForm.fxml
         FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("/view/ConnectionForm.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 600, 400);
         stage.setTitle("CRUD Visual - Conexión a BD");
