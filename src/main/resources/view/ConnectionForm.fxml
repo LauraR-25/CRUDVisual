@@ -1,39 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
 <VBox xmlns="http://javafx.com/javafx/17"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.crudvisual.controller.ConnectionController"
-      spacing="10"
+      spacing="15"
       alignment="CENTER"
-      style="-fx-padding: 20;">
+      prefWidth="450"
+      prefHeight="500"
+      style="-fx-padding: 30; -fx-background-color: #f8f9fa;">
 
-    <Label text="Conectar a Base de Datos"
-           style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+    <Label text="CRUD Gráfico - Conexión a Base de Datos"
+           style="-fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"/>
 
-    <Label text="URL de conexión:"/>
-    <TextField fx:id="urlField"
-               promptText="jdbc:mysql://localhost:3306/notas"/>
-
-    <Label text="Usuario:"/>
-    <TextField fx:id="userField"/>
-
-    <Label text="Contraseña:"/>
-    <PasswordField fx:id="passwordField"/>
-
-    <Label text="Nombre de la tabla:"/>
-    <TextField fx:id="tableField"
-               promptText="ej: materias"/>
-
-    <HBox spacing="10" alignment="CENTER">
-        <Button text="Conectar"
-                onAction="#handleConnect"
-                style="-fx-font-size: 14; -fx-background-color: #4CAF50; -fx-text-fill: white;"/>
-
-        <Button text="Cancelar"
-                onAction="#handleCancel"
-                style="-fx-font-size: 14; -fx-background-color: #f44336; -fx-text-fill: white;"/>
+    <!-- HOST Y PUERTO EN LA MISMA FILA -->
+    <HBox spacing="10">
+        <VBox spacing="5" HBox.hgrow="ALWAYS">
+            <Label text="Host:" style="-fx-font-weight: bold;"/>
+            <TextField fx:id="hostField"
+                       promptText="localhost"
+                       text="localhost"/>
+        </VBox>
+        <VBox spacing="5" HBox.hgrow="SOMETIMES">
+            <Label text="Puerto:" style="-fx-font-weight: bold;"/>
+            <TextField fx:id="portField"
+                       promptText="5432"
+                       text="5433"/>
+        </VBox>
     </HBox>
+
+    <!-- BASE DE DATOS -->
+    <VBox spacing="5">
+        <Label text="Base de datos:" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="databaseField"
+                   promptText="nombre_db"/>
+    </VBox>
+
+    <!-- USUARIO -->
+    <VBox spacing="5">
+        <Label text="Usuario:" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="userField"
+                   promptText="usuario"/>
+    </VBox>
+
+    <!-- CONTRASEÑA -->
+    <VBox spacing="5">
+        <Label text="Contraseña:" style="-fx-font-weight: bold;"/>
+        <PasswordField fx:id="passwordField"/>
+    </VBox>
+
+    <!-- TABLA A TRABAJAR -->
+    <VBox spacing="5">
+        <Label text="Tabla para CRUD:" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="tableField"
+                   promptText="materias"/>
+    </VBox>
+
+    <!-- BOTÓN CONECTAR CON ESTADO -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="CONECTAR"
+                onAction="#handleConnect"
+                style="-fx-font-size: 14; -fx-font-weight: bold; -fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 10 20;"/>
+        <Label fx:id="connectionStatusLabel"
+               text="● Sin conexión"
+               style="-fx-text-fill: #e74c3c; -fx-font-weight: bold;"/>
+    </HBox>
+
+    <!-- SEPARADOR -->
+    <Separator/>
+
+    <!-- ÁREA PARA MOSTRAR TABLAS DE LA BD -->
+    <Label text="Tablas disponibles en la base de datos:"
+           style="-fx-font-weight: bold; -fx-font-size: 14;"/>
+
+    <ListView fx:id="tableListView"
+              prefHeight="150"
+              visible="false"
+              managed="false"/>
+
+    <!-- BOTONES CRUD -->
+    <HBox spacing="10" alignment="CENTER">
+        <Button text="Crear" style="-fx-background-color: #27ae60; -fx-text-fill: white;" disable="true"/>
+        <Button text="Leer" style="-fx-background-color: #2980b9; -fx-text-fill: white;" disable="true"/>
+        <Button text="Actualizar" style="-fx-background-color: #f39c12; -fx-text-fill: white;" disable="true"/>
+        <Button text="Eliminar" style="-fx-background-color: #c0392b; -fx-text-fill: white;" disable="true"/>
+    </HBox>
+
+    <!-- TABLA DE DATOS -->
+    <TableView fx:id="dataTableView"
+               prefHeight="200"
+               visible="false"
+               managed="false"/>
 
 </VBox>

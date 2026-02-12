@@ -13,11 +13,11 @@ public class DatabaseConnector {
      * Conecta a la base de datos
      */
     public boolean connect(String url, String user, String password) {
-        try {
+        try{
             connection = DriverManager.getConnection(url, user, password);
             System.out.println("✅ Conexión exitosa a: " + url);
             return true;
-        } catch (SQLException e) {
+        }catch (SQLException e){
             System.err.println("❌ Error de conexión: " + e.getMessage());
             return false;
         }
