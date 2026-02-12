@@ -1,6 +1,5 @@
 package com.crudvisual;
 
-import com.crudvisual.model.DatabaseConnector;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -10,13 +9,12 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import javafx.beans.property.SimpleObjectProperty;
-import java.sql.SQLException;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class Main extends Application {
-    private DatabaseConnector dbConnector;
-    private String currentTable = "";
+    private String currentTable = "materias";
 
     // Componentes UI
     private TextField hostField = new TextField("localhost");
@@ -77,36 +75,33 @@ public class Main extends Application {
         dataTableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         // ========== ACCIONES ==========
-        connectButton.setOnAction(e -> conectarBD());
+        connectButton.setOnAction(e -> conectarDemo());  // MODO DEMO
 
         // Seleccionar tabla del ListView
         tableListView.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldVal, newVal) -> {
                     if (newVal != null) {
                         tableField.setText(newVal);
-                        cargarDatosTabla(newVal);
+                        cargarDatosDemo(newVal);
                     }
                 }
         );
 
-        // ACCIONES CRUD
-        readBtn.setOnAction(e -> cargarDatosTabla(tableField.getText()));
-
-        createBtn.setOnAction(e -> mostrarFormularioCrear());
-
+        // ACCIONES CRUD - MODO DEMO
+        readBtn.setOnAction(e -> cargarDatosDemo(tableField.getText()));
+        createBtn.setOnAction(e -> mostrarFormularioCrearDemo());
         updateBtn.setOnAction(e -> {
             if (dataTableView.getSelectionModel().getSelectedItem() != null) {
-                mostrarFormularioEditar();
+                mostrarFormularioEditarDemo();
             } else {
-                showAlert("Seleccionar", "Debe seleccionar un registro para actualizar", Alert.AlertType.WARNING);
+                showAlert("Seleccionar", "Debe seleccionar un registro", Alert.AlertType.WARNING);
             }
         });
-
         deleteBtn.setOnAction(e -> {
             if (dataTableView.getSelectionModel().getSelectedItem() != null) {
-                confirmarEliminar();
+                confirmarEliminarDemo();
             } else {
-                showAlert("Seleccionar", "Debe seleccionar un registro para eliminar", Alert.AlertType.WARNING);
+                showAlert("Seleccionar", "Debe seleccionar un registro", Alert.AlertType.WARNING);
             }
         });
 
@@ -135,159 +130,126 @@ public class Main extends Application {
         stage.show();
     }
 
-    // =============================================
-    // CONEXIÓN Y CARGA DE DATOS
-    // =============================================
+    // ========== MODO DEMO - FUNCIONA SIN BASE DE DATOS ==========
 
-    private void conectarBD() {
-        String host = hostField.getText();
-        String port = portField.getText();
-        String database = databaseField.getText();
-        String user = userField.getText();
-        String password = passwordField.getText();
+    private void conectarDemo() {
+        statusLabel.setText("● Conectado a " + databaseField.getText() + " (DEMO)");
+        statusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
 
-        String url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+        // Mostrar tablas de ejemplo
+        ObservableList<String> tablasDemo = FXCollections.observableArrayList(
+                "materias", "estudiantes", "profesores", "cursos"
+        );
+        tableListView.setItems(tablasDemo);
+        tableListView.setVisible(true);
+        crudBox.setVisible(true);
+        crudBox.setDisable(false);
 
-        dbConnector = new DatabaseConnector();
-        boolean conectado = dbConnector.connect(url, user, password);
+        // Cargar datos de materias
+        cargarDatosDemo("materias");
 
-        if (conectado) {
-            statusLabel.setText("● Conectado a " + database);
-            statusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
-
-            cargarTablasBD();
-
-            tableListView.setVisible(true);
-            crudBox.setVisible(true);
-            crudBox.setDisable(false);
-
-            if (!tableField.getText().isEmpty()) {
-                cargarDatosTabla(tableField.getText());
-            }
-
-            showAlert("Éxito", "Conectado a " + database, Alert.AlertType.INFORMATION);
-        } else {
-            statusLabel.setText("● Error de conexión");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
-            showAlert("Error", "No se pudo conectar a la base de datos", Alert.AlertType.ERROR);
-        }
+        showAlert("✅ MODO DEMO", "Conectado en modo demostración\nLos datos son del proyecto", Alert.AlertType.INFORMATION);
     }
 
-    private void cargarTablasBD() {
-        try {
-            var tablas = dbConnector.getTables();
-            tableListView.setItems(FXCollections.observableArrayList(tablas));
-        } catch (SQLException e) {
-            showAlert("Error", "No se pudieron cargar las tablas: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
-    }
-
-    private void cargarDatosTabla(String tabla) {
+    private void cargarDatosDemo(String tabla) {
         currentTable = tabla;
-        try {
-            var rs = dbConnector.getAllRecords(tabla);
-            var metaData = rs.getMetaData();
-            int columnCount = metaData.getColumnCount();
+        dataTableView.getColumns().clear();
 
-            dataTableView.getColumns().clear();
-
-            for (int i = 1; i <= columnCount; i++) {
-                final int colIndex = i - 1;
-                String columnName = metaData.getColumnName(i);
-
-                TableColumn<ObservableList<Object>, Object> column = new TableColumn<>(columnName);
-                column.setCellValueFactory(cellData -> {
-                    ObservableList<Object> row = cellData.getValue();
-                    return new SimpleObjectProperty<>(row.get(colIndex));
-                });
-
-                dataTableView.getColumns().add(column);
-            }
-
-            ObservableList<ObservableList<Object>> data = FXCollections.observableArrayList();
-
-            while (rs.next()) {
-                ObservableList<Object> row = FXCollections.observableArrayList();
-                for (int i = 1; i <= columnCount; i++) {
-                    row.add(rs.getObject(i));
-                }
-                data.add(row);
-            }
-
-            dataTableView.setItems(data);
-            dataTableView.setVisible(true);
-
-        } catch (SQLException e) {
-            showAlert("Error", "No se pudieron cargar los datos: " + e.getMessage(), Alert.AlertType.ERROR);
+        // Columnas fijas para materias
+        String[] columnas = {"id_materia", "facultad", "escuela", "nombre"};
+        for (int i = 0; i < columnas.length; i++) {
+            final int colIndex = i;
+            TableColumn<ObservableList<Object>, Object> column = new TableColumn<>(columnas[i]);
+            column.setCellValueFactory(cellData -> {
+                ObservableList<Object> row = cellData.getValue();
+                return new SimpleObjectProperty<>(row.get(colIndex));
+            });
+            dataTableView.getColumns().add(column);
         }
+
+        // Datos del proyecto
+        ObservableList<ObservableList<Object>> data = FXCollections.observableArrayList();
+
+        ObservableList<Object> row1 = FXCollections.observableArrayList();
+        row1.addAll(1, 1, 1, "Teoría de la información");
+        data.add(row1);
+
+        ObservableList<Object> row2 = FXCollections.observableArrayList();
+        row2.addAll(2, 1, 2, "Programación Visual");
+        data.add(row2);
+
+        ObservableList<Object> row3 = FXCollections.observableArrayList();
+        row3.addAll(3, 1, 2, "Despliegue de software");
+        data.add(row3);
+
+        ObservableList<Object> row4 = FXCollections.observableArrayList();
+        row4.addAll(4, 2, 5, "Matemática IV");
+        data.add(row4);
+
+        ObservableList<Object> row5 = FXCollections.observableArrayList();
+        row5.addAll(5, 2, 5, "Diseño Lógico");
+        data.add(row5);
+
+        ObservableList<Object> row6 = FXCollections.observableArrayList();
+        row6.addAll(6, 2, 6, "Comunicación de datos");
+        data.add(row6);
+
+        ObservableList<Object> row7 = FXCollections.observableArrayList();
+        row7.addAll(7, 3, 7, "Investigación de operaciones");
+        data.add(row7);
+
+        ObservableList<Object> row8 = FXCollections.observableArrayList();
+        row8.addAll(8, 3, 8, "Ingeniería económica");
+        data.add(row8);
+
+        dataTableView.setItems(data);
+        dataTableView.setVisible(true);
     }
 
-    // =============================================
-    // CREATE - Insertar nuevo registro
-    // =============================================
-
-    private void mostrarFormularioCrear() {
+    private void mostrarFormularioCrearDemo() {
         Stage formStage = new Stage();
         formStage.setTitle("Crear nuevo registro en " + currentTable);
 
         VBox formRoot = new VBox(10);
         formRoot.setStyle("-fx-padding: 20; -fx-background-color: #f8f9fa;");
 
-        try {
-            var columns = dbConnector.getColumns(currentTable);
-            Map<String, TextField> fields = new HashMap<>();
+        TextField facultadField = new TextField();
+        facultadField.setPromptText("Ingrese facultad");
+        TextField escuelaField = new TextField();
+        escuelaField.setPromptText("Ingrese escuela");
+        TextField nombreField = new TextField();
+        nombreField.setPromptText("Ingrese nombre");
 
-            for (String column : columns) {
-                if (!column.toLowerCase().contains("id") && !column.toLowerCase().contains("serial")) {
-                    VBox fieldBox = new VBox(5);
-                    fieldBox.getChildren().add(new Label(column + ":"));
-                    TextField textField = new TextField();
-                    textField.setPromptText("Ingrese " + column);
-                    fieldBox.getChildren().add(textField);
-                    formRoot.getChildren().add(fieldBox);
-                    fields.put(column, textField);
-                }
-            }
+        formRoot.getChildren().addAll(
+                new Label("facultad:"), facultadField,
+                new Label("escuela:"), escuelaField,
+                new Label("nombre:"), nombreField
+        );
 
-            Button guardarBtn = new Button("Guardar");
-            guardarBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
-            guardarBtn.setMaxWidth(Double.MAX_VALUE);
+        Button guardarBtn = new Button("Guardar");
+        guardarBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
+        guardarBtn.setMaxWidth(Double.MAX_VALUE);
 
-            guardarBtn.setOnAction(e -> {
-                Map<String, Object> valores = new HashMap<>();
-                for (Map.Entry<String, TextField> entry : fields.entrySet()) {
-                    String valor = entry.getValue().getText();
-                    if (!valor.isEmpty()) {
-                        valores.put(entry.getKey(), valor);
-                    }
-                }
+        guardarBtn.setOnAction(e -> {
+            // Simular inserción
+            ObservableList<Object> newRow = FXCollections.observableArrayList();
+            newRow.addAll(dataTableView.getItems().size() + 1,
+                    Integer.parseInt(facultadField.getText()),
+                    Integer.parseInt(escuelaField.getText()),
+                    nombreField.getText());
+            dataTableView.getItems().add(newRow);
+            showAlert("Éxito", "Registro insertado correctamente (DEMO)", Alert.AlertType.INFORMATION);
+            formStage.close();
+        });
 
-                try {
-                    dbConnector.insertRecord(currentTable, valores);
-                    showAlert("Éxito", "Registro insertado correctamente", Alert.AlertType.INFORMATION);
-                    formStage.close();
-                    cargarDatosTabla(currentTable);
-                } catch (SQLException ex) {
-                    showAlert("Error", "No se pudo insertar: " + ex.getMessage(), Alert.AlertType.ERROR);
-                }
-            });
+        formRoot.getChildren().add(guardarBtn);
 
-            formRoot.getChildren().add(guardarBtn);
-
-            Scene formScene = new Scene(formRoot, 400, 500);
-            formStage.setScene(formScene);
-            formStage.show();
-
-        } catch (SQLException e) {
-            showAlert("Error", "No se pudieron obtener las columnas: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
+        Scene formScene = new Scene(formRoot, 350, 300);
+        formStage.setScene(formScene);
+        formStage.show();
     }
 
-    // =============================================
-    // UPDATE - Editar registro existente
-    // =============================================
-
-    private void mostrarFormularioEditar() {
+    private void mostrarFormularioEditarDemo() {
         ObservableList<Object> selectedRow = dataTableView.getSelectionModel().getSelectedItem();
 
         Stage formStage = new Stage();
@@ -296,115 +258,54 @@ public class Main extends Application {
         VBox formRoot = new VBox(10);
         formRoot.setStyle("-fx-padding: 20; -fx-background-color: #f8f9fa;");
 
-        try {
-            var columns = dbConnector.getColumns(currentTable);
-            Map<String, TextField> fields = new HashMap<>();
-            String idColumn = null;
-            Object idValue = null;
+        TextField facultadField = new TextField(selectedRow.get(1).toString());
+        TextField escuelaField = new TextField(selectedRow.get(2).toString());
+        TextField nombreField = new TextField(selectedRow.get(3).toString());
 
-            for (int i = 0; i < columns.size(); i++) {
-                String column = columns.get(i);
-                Object value = selectedRow.get(i);
+        formRoot.getChildren().addAll(
+                new Label("ID: " + selectedRow.get(0)),
+                new Label("facultad:"), facultadField,
+                new Label("escuela:"), escuelaField,
+                new Label("nombre:"), nombreField
+        );
 
-                if (column.toLowerCase().contains("id") || column.toLowerCase().contains("serial")) {
-                    idColumn = column;
-                    idValue = value;
-                } else {
-                    VBox fieldBox = new VBox(5);
-                    fieldBox.getChildren().add(new Label(column + ":"));
-                    TextField textField = new TextField(value != null ? value.toString() : "");
-                    fieldBox.getChildren().add(textField);
-                    formRoot.getChildren().add(fieldBox);
-                    fields.put(column, textField);
-                }
-            }
+        Button actualizarBtn = new Button("Actualizar");
+        actualizarBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
+        actualizarBtn.setMaxWidth(Double.MAX_VALUE);
 
-            Label idLabel = new Label("ID: " + idValue);
-            idLabel.setStyle("-fx-font-weight: bold;");
-            formRoot.getChildren().add(0, idLabel);
+        actualizarBtn.setOnAction(e -> {
+            selectedRow.set(1, Integer.parseInt(facultadField.getText()));
+            selectedRow.set(2, Integer.parseInt(escuelaField.getText()));
+            selectedRow.set(3, nombreField.getText());
+            dataTableView.refresh();
+            showAlert("Éxito", "Registro actualizado correctamente (DEMO)", Alert.AlertType.INFORMATION);
+            formStage.close();
+        });
 
-            Button actualizarBtn = new Button("Actualizar");
-            actualizarBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
-            actualizarBtn.setMaxWidth(Double.MAX_VALUE);
+        formRoot.getChildren().add(actualizarBtn);
 
-            String finalIdColumn = idColumn;
-            Object finalIdValue = idValue;
-
-            actualizarBtn.setOnAction(e -> {
-                Map<String, Object> valores = new HashMap<>();
-                for (Map.Entry<String, TextField> entry : fields.entrySet()) {
-                    String valor = entry.getValue().getText();
-                    if (!valor.isEmpty()) {
-                        valores.put(entry.getKey(), valor);
-                    }
-                }
-
-                try {
-                    String whereClause = finalIdColumn + " = " + finalIdValue;
-                    dbConnector.updateRecord(currentTable, valores, whereClause);
-                    showAlert("Éxito", "Registro actualizado correctamente", Alert.AlertType.INFORMATION);
-                    formStage.close();
-                    cargarDatosTabla(currentTable);
-                } catch (SQLException ex) {
-                    showAlert("Error", "No se pudo actualizar: " + ex.getMessage(), Alert.AlertType.ERROR);
-                }
-            });
-
-            formRoot.getChildren().add(actualizarBtn);
-
-            Scene formScene = new Scene(formRoot, 400, 500);
-            formStage.setScene(formScene);
-            formStage.show();
-
-        } catch (SQLException e) {
-            showAlert("Error", "No se pudieron obtener las columnas: " + e.getMessage(), Alert.AlertType.ERROR);
-        }
+        Scene formScene = new Scene(formRoot, 350, 350);
+        formStage.setScene(formScene);
+        formStage.show();
     }
 
-    // =============================================
-    // DELETE - Eliminar registro
-    // =============================================
-
-    private void confirmarEliminar() {
+    private void confirmarEliminarDemo() {
         ObservableList<Object> selectedRow = dataTableView.getSelectionModel().getSelectedItem();
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Confirmar eliminación");
         confirm.setHeaderText("¿Está seguro de eliminar este registro?");
-        confirm.setContentText("Esta acción no se puede deshacer.");
+        confirm.setContentText("ID: " + selectedRow.get(0) + " - " + selectedRow.get(3));
 
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                try {
-                    var columns = dbConnector.getColumns(currentTable);
-                    String idColumn = null;
-                    Object idValue = null;
-
-                    for (int i = 0; i < columns.size(); i++) {
-                        String column = columns.get(i);
-                        if (column.toLowerCase().contains("id") || column.toLowerCase().contains("serial")) {
-                            idColumn = column;
-                            idValue = selectedRow.get(i);
-                            break;
-                        }
-                    }
-
-                    if (idColumn != null) {
-                        String whereClause = idColumn + " = " + idValue;
-                        dbConnector.deleteRecord(currentTable, whereClause);
-                        showAlert("Éxito", "Registro eliminado correctamente", Alert.AlertType.INFORMATION);
-                        cargarDatosTabla(currentTable);
-                    }
-                } catch (SQLException e) {
-                    showAlert("Error", "No se pudo eliminar: " + e.getMessage(), Alert.AlertType.ERROR);
-                }
+                dataTableView.getItems().remove(selectedRow);
+                showAlert("Éxito", "Registro eliminado correctamente (DEMO)", Alert.AlertType.INFORMATION);
             }
         });
     }
 
-    // =============================================
-    // UTILIDADES
-    // =============================================
+    // ========== UTILIDADES ==========
 
     private VBox createVBox(String labelText, Control field) {
         VBox vbox = new VBox(5);
